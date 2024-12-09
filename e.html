@@ -1,0 +1,261 @@
+<!DOCTYPE html>  
+<html lang="en">  
+<head>  
+   <meta charset="UTF-8">  
+   <meta name="viewport" content="width=device-width, initial-scale=1.0">  
+   <title>Minecraft Simulator</title>  
+   <style>  
+      body {  
+        font-family: Arial, sans-serif;  
+      }  
+       
+      #game-container {  
+        width: 800px;  
+        height: 600px;  
+        border: 1px solid black;  
+        margin: 20px auto;  
+      }  
+       
+      #game-canvas {  
+        width: 100%;  
+        height: 100%;  
+      }  
+       
+      #inventory {  
+        position: absolute;  
+        top: 20px;  
+        left: 20px;  
+        background-color: #fff;  
+        padding: 10px;  
+        border: 1px solid black;  
+      }  
+       
+      #current-block {  
+        position: absolute;  
+        top: 20px;  
+        right: 20px;  
+        background-color: #fff;  
+        padding: 10px;  
+        border: 1px solid black;  
+      }  
+   </style>  
+</head>  
+<body>  
+   <div id="game-container">  
+      <canvas id="game-canvas"></canvas>  
+      <div id="inventory"></div>  
+      <div id="current-block"></div>  
+   </div>  
+    
+   <script>  
+      // Define block types  
+      class Block {  
+        constructor(name, color) {  
+           this.name = name;  
+           this.color = color;  
+        }  
+      }  
+       
+      class DirtBlock extends Block {  
+        constructor() {  
+           super("Dirt", "#964B00");  
+        }  
+      }  
+       
+      class StoneBlock extends Block {  
+        constructor() {  
+           super("Stone", "#808080");  
+        }  
+      }  
+       
+      class CoalBlock extends Block {  
+        constructor() {  
+           super("Coal", "#333333");  
+        }  
+      }  
+       
+      class DiamondBlock extends Block {  
+        constructor() {  
+           super("Diamond", "#66CCCC");  
+        }  
+      }  
+       
+      // Define player  
+      class Player {  
+        constructor(x, y, z) {  
+           this.x = x;  
+           this.y = y;  
+           this.z = z;  
+           this.inventory = [];  
+        }  
+          
+        move(dx, dy, dz) {  
+           this.x += dx;  
+           this.y += dy;  
+           this.z += dz;  
+        }  
+          
+        mine(block) {  
+           this.inventory.push(block);  
+           console.log(`Mined ${block.name} block`);  
+        }  
+          
+        place(block) {  
+           if (this.inventory.includes(block)) {  
+              this.inventory.splice(this.inventory.indexOf(block), 1);  
+              console.log(`Placed ${block.name} block`);  
+           } else {  
+              console.log("You don't have that block in your inventory");  
+           }  
+        }  
+      }  
+       
+      // Define world  
+      class World {  
+        constructor(width, height, depth) {  
+           this.width = width;  
+           this.height = height;  
+           this.depth = depth;  
+           this.blocks = [];  
+           for (let x = 0; x < width; x++) {  
+              this.blocks[x] = [];  
+              for (let y = 0; y < height; y++) {  
+                this.blocks[x][y] = [];  
+                for (let z = 0; z < depth; z++) {  
+                   if (y < 5) {  
+                      this.blocks[x][y][z] = new StoneBlock();  
+                   } else if (y < 10) {  
+                      this.blocks[x][y][z] = new DirtBlock();  
+                   } else {  
+                      if (Math.random() < 0.1) {  
+                        this.blocks[x][y][z] = new CoalBlock();  
+                      } else if (Math.random() < 0.05) {  
+                        this.blocks[x][y][z] = new DiamondBlock();  
+                      }  
+                   }  
+                }  
+              }  
+           }  
+        }  
+          
+        getBlock(x, y, z) {  
+           if (x < 0 || x >= this.width || y < 0 || y >= this.height || z < 0 || z >= this.depth) {  
+              return null;  
+           }  
+           return this.blocks[x][y][z];  
+        }  
+      }  
+       
+      // Create world and player  
+      let world = new World(100, 20, 100);  
+      let player = new Player(50, 10, 50);  
+       
+      // Create canvas and context  
+      let canvas = document.getElementById("game-canvas");  
+      let context = canvas.getContext("2d");  
+       
+      // Set up rendering  
+      function render() {  
+        context.clearRect(0, 0, canvas.width, canvas.height);  
+        for (let x = 0; x < world.width; x++) {  
+           for (let y = 0; y < world.height; y++) {  
+              for (let z = 0; z < world.depth; z++) {  
+                let block = world.getBlock(x, y, z);  
+                if (block) {  
+                   context.fillStyle = block.color;  
+                   context.fillRect(x * 10, y * 10, 10, 10);  
+                }  
+              }  
+           }  
+        }  
+        context.fillStyle = "#FF0000";  
+        context.fillRect(player.x * 10, player.y * 10, 10, 10);  
+      }  
+       
+      // Set up movement  
+      document.addEventListener("keydown", (event) => {  
+        switch (event.key) {  
+           case "w":  
+              player.move(0, -1, 0);  
+              break;  
+           case "s":  
+              player.move(0, 1, 0);  
+              break;  
+           case "a":  
+              player.move(-1, 0, 0);  
+              break;  
+           case "d":  
+              player.move(1, 0, 0);  
+              break;  
+           case "q":  
+              player.move(0, 0, -1);  
+              break;  
+           case "e":  
+              player.move(0, 0, 1);  
+              break;  
+        }  
+        render();  
+      });  
+       
+      // Set up mining and placement  
+      canvas.addEventListener("click", (event) => {  
+        let x = Math.floor(event.clientX / 10);  
+        let y = Math.floor(event.clientY / 10);  
+        let block = world.getBlock(x, y, player.z);  
+        if (block) {  
+           player.mine(block);  
+           world.blocks[x][y][player.z] = null;  
+        } else {  
+           let blockName = prompt("Enter block name (Dirt, Stone, Coal, Diamond): ");  
+           let block;  
+           switch (blockName) {  
+              case "Dirt":  
+                block = new DirtBlock();  
+                break;  
+              case "Stone":  
+                block = new StoneBlock();  
+                break;  
+              case "Coal":  
+                block = new CoalBlock();  
+                break;  
+              case "Diamond":  
+                block = new DiamondBlock();  
+                break;  
+              default:  
+                console.log("Invalid block name");  
+                return;  
+           }  
+           player.place(block);  
+           world.blocks[x][y][player.z] = block;  
+        }  
+        render();  
+      });  
+       
+      // Set up inventory and current block displays  
+      let inventoryDisplay = document.getElementById("inventory");  
+      let currentBlockDisplay = document.getElementById("current-block");  
+       
+      function updateDisplays() {  
+        inventoryDisplay.innerHTML = "Inventory: ";  
+        for (let block of player.inventory) {  
+           inventoryDisplay.innerHTML += block.name + ", ";  
+        }  
+        let currentBlock = world.getBlock(player.x, player.y, player.z);  
+        if (currentBlock) {  
+           currentBlockDisplay.innerHTML = `Current Block: ${currentBlock.name}`;  
+        } else {  
+           currentBlockDisplay.innerHTML = "Current Block: None";  
+        }  
+      }  
+       
+      // Main loop  
+      function main() {  
+        render();  
+        updateDisplays();  
+        requestAnimationFrame(main);  
+      }  
+       
+      main();  
+   </script>  
+</body>  
+</html>
